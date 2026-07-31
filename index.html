@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEB-WEBTHEREMINE UNIVERSEL</title>
+  <style>
+    :root {
+      --bg: #0a0a10; --panel: #12121c; --accent: #00e87a;
+      --dim: #333; --text: #bbb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Courier New', monospace;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 100vh; gap: 6px; padding: 8px;
+    }
+    h1 {
+      color: var(--accent); font-size: 1em;
+      letter-spacing: .5em; text-transform: uppercase; padding: 6px 0;
+    }
+    #video-wrap { position: relative; line-height: 0; border: 1px solid #1a1a2a; width: 100%; max-width: 640px; }
+    #videoel { display: none; }
+    #overlay { display: block; cursor: crosshair; width: 100%; height: auto; touch-action: none; }
+    .panel {
+      background: var(--panel); border: 1px solid #1e1e30;
+      border-radius: 4px; padding: 7px 12px;
+      display: flex; flex-wrap: wrap; gap: 10px;
+      align-items: center; width: 100%; max-width: 640px;
+    }
+    button {
+      background: transparent; color: var(--accent);
+      border: 1px solid var(--accent); padding: 5px 13px;
+      cursor: pointer; font-family: monospace; font-size: .82em;
+      border-radius: 3px; transition: background .12s; white-space: nowrap;
+    }
+    button:hover { background: rgba(0,232,122,.1); }
+    button.on { background: var(--accent); color: #000; font-weight: bold; }
+    label { display: flex; align-items: center; gap: 5px; font-size: .78em; color: #555; }
+    label span { color: var(--text); }
+    select {
+      background: var(--bg); color: var(--text);
+      border: 1px solid #2a2a3a; padding: 3px 5px;
+      font-family: monospace; font-size: .78em; border-radius: 2px;
+    }
+    input[type=text] {
+      min-width: 190px; background: var(--bg); color: var(--text);
+      border: 1px solid #2a2a3a; padding: 5px 7px;
+      font-family: monospace; font-size: .78em; border-radius: 2px;
+    }
+    .is-hidden { display: none !important; }
+    #midi-status { width: 100%; font-size: .68em; color: #777; }
+    input[type=range] { width: 70px; accent-color: var(--accent); }
+    input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; }
+    #note-big {
+      font-size: 1.5em; color: var(--accent); font-weight: bold;
+      min-width: 72px; text-align: center; letter-spacing: .05em;
+    }
+    #note-editor { display: none; width: 100%; max-width: 640px; }
+    #note-editor.open { display: block; }
+    .note-editor-hdr {
+      background: var(--panel); border: 1px solid #1e1e30;
+      border-bottom: none; border-radius: 4px 4px 0 0;
+      padding: 5px 12px; font-size: .75em; color: #555;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .note-editor-hdr button {
+      border: none; padding: 2px 8px; font-size: .78em;
+      color: #555; border-color: #333;
+    }
+    .note-grid {
+      background: var(--panel); border: 1px solid #1e1e30;
+      border-top: none; border-radius: 0 0 4px 4px;
+      padding: 6px;
+      display: grid; grid-template-columns: repeat(15, 1fr); gap: 3px;
+    }
+    .note-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .note-cell .idx { font-size: .58em; color: #333; }
+    .note-cell input {
+      width: 100%; background: var(--bg); color: var(--accent);
+      border: 1px solid #2a2a3a; text-align: center;
+      font-family: monospace; font-size: .68em; padding: 3px 1px;
+      border-radius: 2px;
+    }
+    .note-cell input:focus { border-color: var(--accent); outline: none; }
+    #status { font-size: .7em; color: #888; text-align: center; }
+    body { touch-action: manipulation; user-select: none; }
+    @media (max-width: 500px) {
+      h1 { font-size: .8em; letter-spacing: .2em; }
+      button { padding: 9px 12px; font-size: .9em; }
+      select, input[type=range] { font-size: .85em; }
+      .note-grid { grid-template-columns: repeat(5, 1fr); }
+      #note-big { font-size: 1.2em; }
+    }
+    #video-wrap:fullscreen,
+    #video-wrap:-webkit-full-screen {
+      width: 100vw !important; max-width: none !important;
+      height: 100vh; background: #000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #video-wrap:fullscreen #overlay,
+    #video-wrap:-webkit-full-screen #overlay {
+      width: min(100vw, calc(100vh * 4 / 3)) !important;
+      height: min(100vh, calc(100vw * 3 / 4)) !important;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚡ SEB-WEBTHEREMINE UNIVERSEL</h1>
+
+  <div id="video-wrap">
+    <video id="videoel" width="640" height="480"></video>
+    <canvas id="overlay" width="640" height="480"></canvas>
+  </div>
+
+  <div class="panel">
+    <button id="btn-start">▶ START</button>
+    <label><span>Gamme</span>
+      <select id="sel-scale">
+        <option value="M">Majeur</option>
+        <option value="mh">min. harm.</option>
+        <option value="Penta">Pentatonique</option>
+        <option value="Myx">Mixolydien</option>
+        <option value="Dor">Dorien</option>
+      </select>
+    </label>
+    <label><span>Fond.</span>
+      <select id="sel-root">
+        <option value="60">DO4</option>
+        <option value="62">RÉ4</option>
+        <option value="64">MI4</option>
+        <option value="65">FA4</option>
+        <option value="67">SOL4</option>
+        <option value="69">LA4</option>
+        <option value="71">SI4</option>
+        <option value="72">DO5</option>
+      </select>
+    </label>
+    <label><span>Main</span>
+      <select id="sel-hand">
+        <option value="left">Gauche</option>
+        <option value="right">Droite</option>
+      </select>
+    </label>
+    <label><span>Cam</span>
+      <select id="sel-cam"><option value="">Auto</option></select>
+    </label>
+    <label><span>Vol</span>
+      <input id="rng-vol" type="range" min="0" max="1" step="0.01" value="0.7">
+    </label>
+    <label><span>Pan</span>
+      <input id="rng-pan" type="range" min="-1" max="1" step="0.01" value="0">
+    </label>
+    <label><span>Sortie</span>
+      <select id="sel-out"><option value="">Défaut</option></select>
+    </label>
+    <label><span>Son</span>
+      <select id="sel-son">
+        <option value="theremin">Thérémine</option>
+        <option value="martenot">Onde Martenot</option>
+        <option value="drone">Drone</option>
+        <option value="strings">String Ensemble</option>
+        <option value="flute">Flûte</option>
+        <option value="ocarina">Ocarina</option><option value="piano">Piano</option>
+      </select>
+    </label>
+    <label><span>Commande</span>
+      <select id="sel-control-output">
+        <option value="audio">Audio local</option>
+        <option value="webmidi">MIDI direct</option>
+        <option value="network">Pont MIDI réseau</option>
+      </select>
+    </label>
+    <button id="btn-midi-connect" class="is-hidden">CONNECTER MIDI</button>
+    <label id="midi-output-wrap" class="is-hidden"><span>Port MIDI</span>
+      <select id="sel-midi-output"><option value="">Aucune sortie</option></select>
+    </label>
+    <input id="network-url" class="is-hidden" type="text"
+      inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="wss://adresse-du-pont">
+    <button id="btn-network-connect" class="is-hidden">CONNECTER LE PONT</button>
+    <div id="midi-status">Audio local actif</div>
+    <div id="note-big">—</div>
+    <button id="btn-edit" style="margin-left:auto">NOTES ▾</button>
+    <button id="btn-fs" title="Plein écran">⛶</button>
+  </div>
+
+  <div id="note-editor">
+    <div class="note-editor-hdr">
+      <span>Notes — nom FR (ex: LA4) ou numéro MIDI</span>
+      <button id="btn-regen">↺ Regénérer</button>
+    </div>
+    <div class="note-grid" id="note-grid"></div>
+  </div>
+
+  <div id="status">Chargement du modèle MediaPipe…</div>
+
+<script src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
+<script type="module">
+(async () => {
+
+// ── SCALES ──────────────────────────────────────────────────────────────────
+const SCALES = {
+  M:     [0,2,4,5,7,9,11],
+  mh:    [0,2,3,5,7,8,11],
+  Penta: [0,2,4,7,9],
+  Myx:   [0,2,4,5,7,9,10],
+  Dor:   [0,2,3,5,7,9,10]
+};
+
+const FR = ['DO','DO#','RÉ','RÉ#','MI','FA','FA#','SOL','SOL#','LA','LA#','SI'];
+
+function midiToName(m) {
+  if (m < 0 || m > 127) return '?';
+  return FR[m % 12] + (Math.floor(m / 12) - 1);
+}
+function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+
+function genNotes(root, mode, n = 15) {
+  const ivs = SCALES[mode];
+  const out = []; let oct = 0, i = 0;
+  while (out.length < n) {
+    const note = root + oct * 12 + ivs[i % ivs.length];
+    if (note <= 127) out.push(note);
+    if (++i % ivs.length === 0) oct++;
+    if (oct > 6) break;
+  }
+  return out;
+}
+
+function parseFR(s) {
+  const n = parseInt(s);
+  if (!isNaN(n) && n >= 0 && n <= 127) return n;
+  const up = s.trim().toUpperCase();
+  const map = [
+    ['SOL#',8],['DO#',1],['RÉ#',3],['RE#',3],['FA#',6],['LA#',10],
+    ['SOL',7],['DO',0],['RÉ',2],['RE',2],['MI',4],['FA',5],['LA',9],['SI',11]
+  ];
+  for (const [name, st] of map) {
+    if (up.startsWith(name)) {
+      const oct = parseInt(up.slice(name.length));
+      if (!isNaN(oct) && oct >= -1 && oct <= 9) return (oct + 1) * 12 + st;
+    }
+  }
+  return null;
+}
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let notes     = genNotes(60, 'M');
+let running   = false;
+let mirrored  = true;
+let handChoice = 'left'; // 'left' or 'right' from user's perspective
+let activeIdx = -1;
+let activeVol = 0;
+let controlOutput = 'audio';
+let midiAccess = null;
+let midiOutput = null;
+let networkSocket = null;
+let lastControlNote = null;
+let lastExpression = -1;
+
+const selControlOutput = document.getElementById('sel-control-output');
+const btnMidiConnect = document.getElementById('btn-midi-connect');
+const midiOutputWrap = document.getElementById('midi-output-wrap');
+const selMidiOutput = document.getElementById('sel-midi-output');
+const networkUrl = document.getElementById('network-url');
+const btnNetworkConnect = document.getElementById('btn-network-connect');
+const midiStatus = document.getElementById('midi-status');
+
+networkUrl.value = localStorage.getItem('seb-midi-bridge-url') || '';
+
+function setMidiStatus(message, ok = false) {
+  midiStatus.textContent = message;
+  midiStatus.style.color = ok ? 'var(--accent)' : '#777';
+}
+
+function sendControlBytes(bytes) {
+  if (controlOutput === 'webmidi' && midiOutput) {
+    midiOutput.send(bytes);
+  } else if (controlOutput === 'network' && networkSocket?.readyState === WebSocket.OPEN) {
+    networkSocket.send(JSON.stringify({
+      protocol: 'seb-midi-bridge-v1',
+      type: 'midi',
+      data: bytes,
+      timestamp: performance.now()
+    }));
+  }
+}
+
+function stopControlNote() {
+  if (lastControlNote !== null) sendControlBytes([0x80, lastControlNote, 0]);
+  lastControlNote = null;
+  lastExpression = -1;
+}
+
+function updateControlOutput(idx, vol) {
+  if (controlOutput === 'audio') return;
+  if (idx < 0 || vol <= 0.02) {
+    stopControlNote();
+    return;
+  }
+
+  const note = Math.max(0, Math.min(127, notes[idx]));
+  const targetVelocity = Math.max(1, Math.min(127, Math.round(vol * 127)));
+  const velocity = lastControlNote === note && lastExpression >= 0
+    ? Math.round(lastExpression + (targetVelocity - lastExpression) * 0.24)
+    : targetVelocity;
+
+  if (note !== lastControlNote) {
+    stopControlNote();
+    sendControlBytes([0x90, note, velocity]);
+    lastControlNote = note;
+    lastExpression = velocity;
+  } else if (Math.abs(velocity - lastExpression) >= 2) {
+    // CC11 transmet la hauteur verticale en continu, sans redéclencher la note.
+    sendControlBytes([0xB0, 11, velocity]);
+    lastExpression = velocity;
+  }
+}
+
+function refreshMidiOutputs() {
+  const previous = selMidiOutput.value;
+  selMidiOutput.innerHTML = '<option value="">Aucune sortie</option>';
+  if (!midiAccess) return;
+  for (const output of midiAccess.outputs.values()) {
+    const option = document.createElement('option');
+    option.value = output.id;
+    option.textContent = output.name || output.manufacturer || 'Sortie MIDI';
+    if (output.id === previous) option.selected = true;
+    selMidiOutput.appendChild(option);
+  }
+  midiOutput = midiAccess.outputs.get(selMidiOutput.value) || null;
+  if (!midiOutput && midiAccess.outputs.size === 1) {
+    midiOutput = [...midiAccess.outputs.values()][0];
+    selMidiOutput.value = midiOutput.id;
+  }
+  setMidiStatus(
+    midiOutput ? `MIDI connecté : ${midiOutput.name || 'sortie sélectionnée'}` : 'Choisissez une sortie MIDI',
+    Boolean(midiOutput)
+  );
+}
+
+async function connectWebMidi() {
+  if (!navigator.requestMIDIAccess) {
+    setMidiStatus('MIDI direct indisponible ici : utilisez Pont MIDI réseau');
+    return;
+  }
+  try {
+    midiAccess = await navigator.requestMIDIAccess();
+    midiAccess.onstatechange = refreshMidiOutputs;
+    refreshMidiOutputs();
+  } catch (error) {
+    console.error(error);
+    setMidiStatus('Autorisation MIDI refusée');
+  }
+}
+
+function disconnectNetwork() {
+  stopControlNote();
+  if (networkSocket) {
+    networkSocket.onclose = null;
+    networkSocket.close();
+    networkSocket = null;
+  }
+  btnNetworkConnect.textContent = 'CONNECTER LE PONT';
+  btnNetworkConnect.classList.remove('on');
+}
+
+function connectNetwork() {
+  if (networkSocket?.readyState === WebSocket.OPEN) {
+    disconnectNetwork();
+    setMidiStatus('Pont MIDI déconnecté');
+    return;
+  }
+  const url = networkUrl.value.trim();
+  if (!/^wss?:\/\//i.test(url)) {
+    setMidiStatus('Saisissez une adresse ws:// ou wss://');
+    return;
+  }
+  localStorage.setItem('seb-midi-bridge-url', url);
+  setMidiStatus('Connexion au pont MIDI…');
+  try {
+    networkSocket = new WebSocket(url);
+    networkSocket.addEventListener('open', () => {
+      networkSocket.send(JSON.stringify({
+        protocol: 'seb-midi-bridge-v1',
+        type: 'hello',
+        name: 'SEB WebTheremine Universel'
+      }));
+      btnNetworkConnect.textContent = 'DÉCONNECTER';
+      btnNetworkConnect.classList.add('on');
+      setMidiStatus('Pont MIDI réseau connecté', true);
+    });
+    networkSocket.addEventListener('error', () => setMidiStatus('Connexion au pont MIDI impossible'));
+    networkSocket.addEventListener('close', () => {
+      networkSocket = null;
+      btnNetworkConnect.textContent = 'CONNECTER LE PONT';
+      btnNetworkConnect.classList.remove('on');
+      setMidiStatus('Pont MIDI déconnecté');
+    });
+  } catch (error) {
+    console.error(error);
+    setMidiStatus('Adresse du pont MIDI invalide');
+  }
+}
+
+function refreshControlOutputUi() {
+  const isWebMidi = controlOutput === 'webmidi';
+  const isNetwork = controlOutput === 'network';
+  btnMidiConnect.classList.toggle('is-hidden', !isWebMidi);
+  midiOutputWrap.classList.toggle('is-hidden', !isWebMidi);
+  networkUrl.classList.toggle('is-hidden', !isNetwork);
+  btnNetworkConnect.classList.toggle('is-hidden', !isNetwork);
+  document.getElementById('sel-son').disabled = controlOutput !== 'audio';
+  if (controlOutput === 'audio') setMidiStatus('Audio local actif', true);
+  else if (isWebMidi) {
+    setMidiStatus(navigator.requestMIDIAccess
+      ? 'Cliquez sur CONNECTER MIDI'
+      : 'MIDI direct indisponible ici : utilisez Pont MIDI réseau');
+  } else {
+    setMidiStatus(networkSocket?.readyState === WebSocket.OPEN
+      ? 'Pont MIDI réseau connecté'
+      : 'Saisissez l’adresse sécurisée du pont MIDI');
+  }
+}
+
+selControlOutput.addEventListener('change', async event => {
+  if (running && controlOutput === 'audio') playNote(-1, 0);
+  else stopControlNote();
+  controlOutput = event.target.value;
+  refreshControlOutputUi();
+  if (controlOutput === 'audio' && running && !audioReady) await initAudio();
+});
+btnMidiConnect.addEventListener('click', connectWebMidi);
+selMidiOutput.addEventListener('change', () => {
+  stopControlNote();
+  midiOutput = midiAccess?.outputs.get(selMidiOutput.value) || null;
+  setMidiStatus(
+    midiOutput ? `MIDI connecté : ${midiOutput.name || 'sortie sélectionnée'}` : 'Choisissez une sortie MIDI',
+    Boolean(midiOutput)
+  );
+});
+btnNetworkConnect.addEventListener('click', connectNetwork);
+refreshControlOutputUi();
+
+// ── PRESETS SON ──────────────────────────────────────────────────────────────
+const PRESETS_SON = {
+  theremin: { oscType:'sawtooth', vibratoHz:5.2, vibratoDepth:5, filterQ:2.5, filterBase:900,  attack:0.012, release:0.07,  reverbMix:0.28, octaveShift:0,  stopTime:0.07 },
+  martenot: { oscType:'sine',     vibratoHz:4.0, vibratoDepth:2, filterQ:0.7, filterBase:2200, attack:0.06,  release:0.15,  reverbMix:0.45, octaveShift:0,  stopTime:0.07 },
+  drone:    { oscType:'sawtooth', vibratoHz:0.5, vibratoDepth:0,   filterQ:3.0, filterBase:280,  attack:2.0,   release:6.0,  reverbMix:0.82, octaveShift:-2, stopTime:0.25 },
+  strings:  { oscType:'sawtooth', vibratoHz:5.2, vibratoDepth:3,   filterQ:1.5, filterBase:700,  attack:0.3,   release:0.4,  reverbMix:0.5,  octaveShift:0,  stopTime:0.15 },
+  flute:    { oscType:'sine',     vibratoHz:5.0, vibratoDepth:2.5, filterQ:0.4, filterBase:5000, attack:0.04,  release:0.1,  reverbMix:0.32, octaveShift:1,  stopTime:0.07 },
+  ocarina: { oscType:'sine',     vibratoHz:4.2, vibratoDepth:1,   filterQ:0.6, filterBase:2800, attack:0.06,  release:0.15, reverbMix:0.28, octaveShift:0,  stopTime:0.08 },
+  piano:  { oscType:'triangle', vibratoHz:0, vibratoDepth:0, filterQ:1.2, filterBase:3200, attack:0.005, release:0.8, reverbMix:0.22, octaveShift:0, stopTime:0.22 }
+};
+let sonMode = 'theremin';
+
+// Retourne true si ce côté MediaPipe correspond à la main choisie par l'utilisateur.
+// En vue miroir, MP "Left" = main droite de l'utilisateur, et vice-versa.
+function isControlHand(side) {
+  if (mirrored) {
+    return handChoice === 'left' ? side === 'Left' : side === 'Right';
+  } else {
+    return handChoice === 'left' ? side === 'Right' : side === 'Left';
+  }
+}
+
+// ── NOTE EDITOR ──────────────────────────────────────────────────────────────
+const noteGrid   = document.getElementById('note-grid');
+const noteInputs = [];
+
+function buildNoteGrid() {
+  noteGrid.innerHTML = '';
+  noteInputs.length = 0;
+  notes.forEach((midi, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'note-cell';
+    const idx = document.createElement('div');
+    idx.className = 'idx';
+    idx.textContent = i + 1;
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.value = midiToName(midi);
+    inp.addEventListener('change', () => {
+      const v = parseFR(inp.value);
+      if (v !== null) { notes[i] = v; inp.value = midiToName(v); }
+      else inp.value = midiToName(notes[i]);
+    });
+    noteInputs.push(inp);
+    cell.appendChild(idx);
+    cell.appendChild(inp);
+    noteGrid.appendChild(cell);
+  });
+}
+buildNoteGrid();
+
+const selScale = document.getElementById('sel-scale');
+const selRoot  = document.getElementById('sel-root');
+
+function regenFromScale() {
+  notes = genNotes(parseInt(selRoot.value), selScale.value);
+  buildNoteGrid();
+}
+
+document.getElementById('btn-edit').addEventListener('click', () =>
+  document.getElementById('note-editor').classList.toggle('open'));
+document.getElementById('btn-regen').addEventListener('click', regenFromScale);
+selScale.addEventListener('change', regenFromScale);
+selRoot.addEventListener('change', regenFromScale);
+
+document.getElementById('sel-hand').addEventListener('change', e => {
+  handChoice = e.target.value;
+});
+
+// ── CAMERA SELECTION ──────────────────────────────────────────────────────────
+const selCam = document.getElementById('sel-cam');
+let currentStream = null;
+let animFrame = null;
+
+async function enumerateCameras() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+    const prev = selCam.value;
+    selCam.innerHTML = '<option value="">Auto</option>';
+    cams.forEach((cam, i) => {
+      const o = document.createElement('option');
+      o.value = cam.deviceId;
+      o.textContent = cam.label || `Caméra ${i + 1}`;
+      if (cam.deviceId === prev) o.selected = true;
+      selCam.appendChild(o);
+    });
+  } catch (_) {}
+}
+try { const _s = await navigator.mediaDevices.getUserMedia({ video: true }); _s.getTracks().forEach(t => t.stop()); } catch(_) {}
+enumerateCameras();
+
+async function startCamera() {
+  if (currentStream) {
+    currentStream.getTracks().forEach(t => t.stop());
+    currentStream = null;
+  }
+  const constraints = { video: {
+    width: { ideal: 640 }, height: { ideal: 480 },
+    ...(selCam.value ? { deviceId: { exact: selCam.value } } : {})
+  }};
+  currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+  video.srcObject = currentStream;
+  await video.play();
+  await enumerateCameras(); // relabels after permission granted
+}
+
+function frameLoop() {
+  if (!running) return;
+  if (video.readyState >= 2 && video.currentTime !== lastT) {
+    lastT = video.currentTime;
+    drawFrame(hl.detectForVideo(video, performance.now()));
+  }
+  animFrame = requestAnimationFrame(frameLoop);
+}
+
+selCam.addEventListener('change', async () => {
+  if (running) {
+    cancelAnimationFrame(animFrame);
+    await startCamera();
+    frameLoop();
+  }
+});
+
+// ── AUDIO ────────────────────────────────────────────────────────────────────
+let audioCtx, osc, vibratoOsc, vibratoGain, filter, envGain, masterGain, reverbGain, panner;
+let pianoSampler, pianoReady = false, pianoLoading, pianoLastPitch = null;
+let stringsSampler, stringsGain, stringsReady = false, stringsLoading, stringsLastPitch = null, stringsLastTrigger = -Infinity;
+
+function initPiano() {
+  if (pianoLoading) return pianoLoading;
+  if (!window.Tone) return Promise.reject(new Error('Tone.js indisponible'));
+  window.Tone.setContext(audioCtx);
+  pianoLoading = new Promise((resolve, reject) => {
+    pianoSampler = new window.Tone.Sampler({
+      urls: {
+        C4: 'C4.mp3',
+        'D#4': 'Ds4.mp3',
+        'F#4': 'Fs4.mp3',
+        A4: 'A4.mp3'
+      },
+      baseUrl: 'https://tonejs.github.io/audio/salamander/',
+      attack: 0,
+      release: 1.5,
+      onload: () => {
+        pianoReady = true;
+        resolve();
+      },
+      onerror: error => {
+        console.error('Chargement du piano impossible', error);
+        reject(error);
+      }
+    }).connect(masterGain);
+  });
+  return pianoLoading;
+}
+
+function initStrings() {
+  if (stringsLoading) return stringsLoading;
+  if (!window.Tone) return Promise.reject(new Error('Tone.js indisponible'));
+  window.Tone.setContext(audioCtx);
+  stringsGain = audioCtx.createGain();
+  stringsGain.gain.value = 0;
+  stringsGain.connect(masterGain);
+  stringsLoading = new Promise((resolve, reject) => {
+    stringsSampler = new window.Tone.Sampler({
+      urls: {
+        C2: 'C2.mp3',
+        A2: 'A2.mp3',
+        C3: 'C3.mp3',
+        A3: 'A3.mp3',
+        C4: 'C4.mp3',
+        A4: 'A4.mp3',
+        C5: 'C5.mp3',
+        A5: 'A5.mp3',
+        C6: 'C6.mp3'
+      },
+      baseUrl: './assets/string-ensemble/',
+      attack: 0.12,
+      release: 1.2,
+      onload: () => {
+        stringsReady = true;
+        resolve();
+      },
+      onerror: error => {
+        console.error('Chargement du String Ensemble impossible', error);
+        reject(error);
+      }
+    }).connect(stringsGain);
+  });
+  return stringsLoading;
+}
+let padOsc1, padOsc2, padOsc3, padOsc4, padGain;
+let tremoloLFO, tremoloAmp, tremoloMod;
+let audioReady = false;
+
+function makeReverb(ctx) {
+  const conv = ctx.createConvolver();
+  const sr = ctx.sampleRate, len = sr * 2;
+  const buf = ctx.createBuffer(2, len, sr);
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < len; i++)
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+  }
+  conv.buffer = buf;
+  return conv;
+}
+
+async function initAudio() {
+  if (audioReady) return;
+  audioReady = true;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  await audioCtx.resume();
+
+  const p = PRESETS_SON[sonMode];
+  osc = audioCtx.createOscillator();
+  osc.type = p.oscType;
+  osc.frequency.value = 261.63;
+
+  vibratoOsc = audioCtx.createOscillator();
+  vibratoOsc.frequency.value = p.vibratoHz;
+  vibratoGain = audioCtx.createGain();
+  vibratoGain.gain.value = p.vibratoDepth;
+  vibratoOsc.connect(vibratoGain);
+  vibratoGain.connect(osc.frequency);
+  vibratoOsc.start();
+
+  filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = p.filterBase;
+  filter.Q.value = p.filterQ;
+
+  envGain = audioCtx.createGain();
+  envGain.gain.value = 0;
+
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = parseFloat(document.getElementById('rng-vol').value);
+
+  const reverb = makeReverb(audioCtx);
+  reverbGain = audioCtx.createGain();
+  reverbGain.gain.value = p.reverbMix;
+
+  padOsc1 = audioCtx.createOscillator(); padOsc2 = audioCtx.createOscillator();
+  padOsc3 = audioCtx.createOscillator(); padOsc4 = audioCtx.createOscillator();
+  padGain = audioCtx.createGain();
+  [padOsc1, padOsc2, padOsc3, padOsc4].forEach(o => { o.type = 'sawtooth'; o.connect(padGain); o.start(); });
+  padOsc1.detune.value = -20; padOsc2.detune.value = +20;
+  padOsc3.detune.value = -45; padOsc4.detune.value = +45;
+  padGain.gain.value = sonMode === 'drone' ? 0.3 : sonMode === 'strings' ? 0.45 : 0;
+
+  tremoloLFO = audioCtx.createOscillator();
+  tremoloLFO.type = 'sine'; tremoloLFO.frequency.value = 5.0;
+  tremoloAmp = audioCtx.createGain();
+  tremoloAmp.gain.value = sonMode === 'drone' ? 0.12 : 0;
+  tremoloMod = audioCtx.createGain();
+  tremoloMod.gain.value = sonMode === 'drone' ? 0.88 : 1;
+  tremoloLFO.connect(tremoloAmp);
+  tremoloAmp.connect(tremoloMod.gain);
+  tremoloLFO.start();
+
+  osc.connect(filter);
+  padGain.connect(filter);
+  filter.connect(tremoloMod);
+  tremoloMod.connect(envGain);
+  envGain.connect(masterGain);
+  envGain.connect(reverb);
+  reverb.connect(reverbGain);
+  reverbGain.connect(masterGain);
+  panner = audioCtx.createStereoPanner();
+  panner.pan.value = parseFloat(document.getElementById('rng-pan').value) || 0;
+  masterGain.connect(panner);
+  panner.connect(audioCtx.destination);
+  osc.start();
+  const pianoPromise = initPiano().catch(error => {
+    console.error('Piano Salamander indisponible', error);
+  });
+  if (sonMode === 'piano') await pianoPromise;
+  const stringsPromise = initStrings().catch(error => {
+    console.error('String Ensemble FluidR3 GM indisponible', error);
+  });
+  if (sonMode === 'strings') await stringsPromise;
+}
+
+document.getElementById('rng-vol').addEventListener('input', e => {
+  if (masterGain)
+    masterGain.gain.setTargetAtTime(+e.target.value, audioCtx.currentTime, 0.05);
+});
+
+document.getElementById('rng-pan').addEventListener('input', e => {
+  if (panner) panner.pan.setTargetAtTime(+e.target.value, audioCtx.currentTime, 0.05);
+});
+
+const selOut = document.getElementById('sel-out');
+async function enumerateOutputs() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const outs = devices.filter(d => d.kind === 'audiooutput');
+    const prev = selOut.value;
+    selOut.innerHTML = '<option value="">Défaut</option>';
+    outs.forEach((out, i) => {
+      const o = document.createElement('option');
+      o.value = out.deviceId;
+      o.textContent = out.label || `Sortie ${i+1}`;
+      if (out.deviceId === prev) o.selected = true;
+      selOut.appendChild(o);
+    });
+    if (!AudioContext.prototype.setSinkId) { selOut.disabled = true; selOut.title = 'Non supporté sur Safari'; }
+  } catch(_) {}
+}
+enumerateOutputs();
+selOut.addEventListener('change', async () => {
+  if (!audioCtx?.setSinkId) return;
+  try { await audioCtx.setSinkId(selOut.value || ''); } catch(_) {}
+});
+
+function playNote(idx, vol) {
+  if (!running) return;
+  updateControlOutput(idx, vol);
+  if (controlOutput !== 'audio') {
+    activeIdx = idx >= 0 && vol > 0.02 ? idx : -1;
+    activeVol = activeIdx >= 0 ? vol : 0;
+    return;
+  }
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') audioCtx.resume();
+  const p = PRESETS_SON[sonMode];
+  if (idx >= 0 && vol > 0.02) {
+    const freq = midiToFreq(notes[idx]) * Math.pow(2, p.octaveShift);
+    if (sonMode === 'piano') {
+      envGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.01);
+      if (stringsGain) stringsGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+      if (stringsReady && stringsLastPitch !== null) stringsSampler.releaseAll();
+      stringsLastPitch = null;
+      stringsLastTrigger = -Infinity;
+      if (pianoReady && freq !== pianoLastPitch) {
+        pianoSampler.triggerAttackRelease(freq, 1.2, undefined, Math.max(0.15, vol));
+        pianoLastPitch = freq;
+      }
+      activeIdx = idx;
+      activeVol = vol;
+      return;
+    }
+    if (sonMode === 'strings') {
+      envGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.01);
+      if (pianoReady && pianoLastPitch !== null) pianoSampler.releaseAll();
+      pianoLastPitch = null;
+      stringsGain.gain.setTargetAtTime(Math.max(0, Math.min(1, vol)) * 0.85, audioCtx.currentTime, 0.12);
+      const now = audioCtx.currentTime;
+      if (stringsReady && (freq !== stringsLastPitch || now - stringsLastTrigger > 2.9)) {
+        if (stringsLastPitch !== null && stringsLastPitch !== freq) stringsSampler.releaseAll();
+        stringsSampler.triggerAttack(freq, undefined, 0.8);
+        stringsLastPitch = freq;
+        stringsLastTrigger = now;
+      }
+      activeIdx = idx;
+      activeVol = vol;
+      return;
+    }
+    if (stringsGain) stringsGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+    if (stringsReady && stringsLastPitch !== null) stringsSampler.releaseAll();
+    stringsLastPitch = null;
+    stringsLastTrigger = -Infinity;
+    if (pianoReady && pianoLastPitch !== null) pianoSampler.releaseAll();
+    pianoLastPitch = null;
+    osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.03);
+    if (sonMode === 'drone' || sonMode === 'strings') {
+      [padOsc1, padOsc2, padOsc3, padOsc4].forEach(o => o.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05));
+    }
+    filter.frequency.setTargetAtTime(p.filterBase + vol * 2000, audioCtx.currentTime, 0.03);
+    envGain.gain.setTargetAtTime(vol * 0.7, audioCtx.currentTime, p.attack);
+    reverbGain.gain.setTargetAtTime(p.reverbMix, audioCtx.currentTime, 0.05);
+    activeIdx = idx;
+    activeVol = vol;
+  } else {
+    if (sonMode === 'piano') {
+      if (pianoReady && pianoLastPitch !== null) pianoSampler.releaseAll();
+      pianoLastPitch = null;
+      activeIdx = -1;
+      activeVol = 0;
+      return;
+    }
+    if (sonMode === 'strings') {
+      if (stringsGain) stringsGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.15);
+      if (stringsReady && stringsLastPitch !== null) stringsSampler.releaseAll();
+      stringsLastPitch = null;
+      stringsLastTrigger = -Infinity;
+      activeIdx = -1;
+      activeVol = 0;
+      return;
+    }
+    envGain.gain.setTargetAtTime(0, audioCtx.currentTime, p.stopTime);
+    reverbGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+    activeIdx = -1;
+    activeVol = 0;
+  }
+}
+
+// ── MEDIAPIPE ────────────────────────────────────────────────────────────────
+const video   = document.getElementById('videoel');
+const overlay = document.getElementById('overlay');
+const ctx2d   = overlay.getContext('2d');
+
+const vision = await import(
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/vision_bundle.mjs"
+);
+const { HandLandmarker, FilesetResolver, DrawingUtils } = vision;
+const dwUtils = new DrawingUtils(ctx2d);
+
+const fs = await FilesetResolver.forVisionTasks(
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm"
+);
+const hl = await HandLandmarker.createFromOptions(fs, {
+  baseOptions: {
+    modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+    delegate: 'GPU'
+  },
+  runningMode: 'VIDEO',
+  numHands: 2
+});
+
+document.getElementById('status').textContent =
+  'Sébastien Gay - juillet 2026 · sortie universelle';
+
+// ── DRAW ─────────────────────────────────────────────────────────────────────
+function drawFrame(res) {
+  const W = overlay.width, H = overlay.height;
+  const N = notes.length;
+  const zW = W / N;
+  const scale = W / (overlay.offsetWidth || W);
+
+  ctx2d.clearRect(0, 0, W, H);
+
+  // Draw video (mirrored if needed)
+  ctx2d.save();
+  if (mirrored) { ctx2d.translate(W, 0); ctx2d.scale(-1, 1); }
+  ctx2d.drawImage(video, 0, 0, W, H);
+  ctx2d.restore();
+
+  // Note zone bands
+  for (let i = 0; i < N; i++) {
+    const x = i * zW;
+    const active = i === activeIdx;
+    ctx2d.fillStyle = 'rgba(255,255,255,0.025)';
+    ctx2d.fillRect(x, 0, zW - 1, H);
+    if (active) {
+      const bH = activeVol * H;
+      ctx2d.fillStyle = 'rgba(0,232,122,0.25)';
+      ctx2d.fillRect(x, H - bH, zW - 1, bH);
+    }
+    ctx2d.strokeStyle = active ? '#00e87a' : '#252530';
+    ctx2d.lineWidth = active ? 2 : 1;
+    ctx2d.beginPath(); ctx2d.moveTo(x, 0); ctx2d.lineTo(x, H); ctx2d.stroke();
+    ctx2d.fillStyle = active ? '#00e87a' : '#2e2e44';
+    const fs = Math.round(10 * scale);
+    ctx2d.font = active ? `bold ${fs + 1}px monospace` : `${fs}px monospace`;
+    ctx2d.textAlign = 'center';
+    ctx2d.fillText(midiToName(notes[i]), x + zW / 2, fs + 4);
+  }
+
+  // Hand landmarks & control
+  let controlled = false;
+
+  if (res.landmarks && res.handednesses) {
+    for (let h = 0; h < res.handednesses.length; h++) {
+      const side    = res.handednesses[h][0].categoryName;
+      const lm      = res.landmarks[h];
+      const isCtrl  = isControlHand(side);
+      const color   = isCtrl ? '#00e87a' : '#ff6633';
+
+      // Centroïde en espace écran
+      const cx = lm.reduce((s, pt) => s + pt.x, 0) / lm.length;
+      const cy = lm.reduce((s, pt) => s + pt.y, 0) / lm.length;
+      const sx = mirrored ? 1 - cx : cx;
+      const px = sx * W, py = cy * H;
+      const r  = zW / 2;
+
+      // Disque plein au centroïde
+      ctx2d.beginPath();
+      ctx2d.arc(px, py, r, 0, Math.PI * 2);
+      ctx2d.fillStyle = isCtrl ? 'rgba(0,232,122,0.85)' : 'rgba(255,102,51,0.6)';
+      ctx2d.fill();
+
+      if (isCtrl && !controlled) {
+        controlled = true;
+
+        const idx = Math.min(N - 1, Math.floor(sx * N));
+        const vol = Math.max(0, Math.min(1, 1 - cy * 1.35));
+
+        playNote(idx, vol);
+        document.getElementById('note-big').textContent = midiToName(notes[idx]);
+
+        // Volume bar (right edge)
+        const bH = vol * H * 0.85;
+        ctx2d.fillStyle = `rgba(0,232,122,${0.2 + vol * 0.5})`;
+        ctx2d.fillRect(W - 10, H - bH, 8, bH);
+      }
+    }
+  }
+
+  if (!controlled && running) {
+    playNote(-1, 0);
+    document.getElementById('note-big').textContent = '—';
+  }
+}
+
+// ── START / STOP ──────────────────────────────────────────────────────────────
+const btnStart = document.getElementById('btn-start');
+let lastT = -1;
+
+btnStart.addEventListener('click', async () => {
+  if (!running) {
+    if (controlOutput === 'audio') await initAudio();
+    await startCamera();
+    running = true;
+    frameLoop();
+    btnStart.textContent = '⏹ STOP';
+    btnStart.classList.add('on');
+    document.getElementById('status').textContent = '';
+  } else {
+    if (controlOutput === 'audio') playNote(-1, 0);
+    else stopControlNote();
+    running = false;
+    cancelAnimationFrame(animFrame);
+    animFrame = null;
+    if (currentStream) { currentStream.getTracks().forEach(t => t.stop()); currentStream = null; }
+    video.srcObject = null;
+    btnStart.textContent = '▶ START';
+    btnStart.classList.remove('on');
+    ctx2d.clearRect(0, 0, overlay.width, overlay.height);
+    document.getElementById('note-big').textContent = '—';
+    document.getElementById('status').textContent = 'Arrêté';
+  }
+});
+
+// ── CHOIX DU SON ─────────────────────────────────────────────────────────────
+document.getElementById('sel-son').addEventListener('change', e => {
+  sonMode = e.target.value;
+  if (!audioCtx) return;
+  const p = PRESETS_SON[sonMode];
+  osc.type = p.oscType;
+  vibratoOsc.frequency.setTargetAtTime(p.vibratoHz, audioCtx.currentTime, 0.5);
+  vibratoGain.gain.setTargetAtTime(p.vibratoDepth, audioCtx.currentTime, 0.5);
+  filter.Q.setTargetAtTime(p.filterQ, audioCtx.currentTime, 0.5);
+  reverbGain.gain.setTargetAtTime(p.reverbMix, audioCtx.currentTime, 0.5);
+  const isDrone = sonMode === 'drone';
+  const isStrings = sonMode === 'strings';
+  if (isDrone) {
+    padOsc1.detune.value = -20; padOsc2.detune.value = 20;
+    padOsc3.detune.value = -45; padOsc4.detune.value = 45;
+    if (padGain) padGain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.5);
+  } else if (isStrings) {
+    padOsc1.detune.value = -8;  padOsc2.detune.value = 8;
+    padOsc3.detune.value = -18; padOsc4.detune.value = 18;
+    if (padGain) padGain.gain.setTargetAtTime(0.45, audioCtx.currentTime, 0.5);
+  } else {
+    if (padGain) padGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+  }
+  if (tremoloAmp) {
+    tremoloAmp.gain.setTargetAtTime(isDrone ? 0.12 : 0, audioCtx.currentTime, 0.3);
+    tremoloMod.gain.setTargetAtTime(isDrone ? 0.88 : 1, audioCtx.currentTime, 0.3);
+  }
+});
+
+// ── PLEIN ÉCRAN ───────────────────────────────────────────────────────────────
+const btnFs = document.getElementById('btn-fs');
+const videoWrap = document.getElementById('video-wrap');
+btnFs.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    videoWrap.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  btnFs.textContent = document.fullscreenElement ? '⊡' : '⛶';
+  btnFs.title = document.fullscreenElement ? 'Quitter plein écran' : 'Plein écran';
+});
+window.addEventListener('pagehide', stopControlNote);
+
+})();
+</script>
+</body>
+</html>
