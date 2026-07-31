@@ -51,8 +51,6 @@
     }
     .is-hidden { display: none !important; }
     #midi-status { width: 100%; font-size: .68em; color: #777; }
-    input[type=range] { width: 70px; accent-color: var(--accent); }
-    input[type=checkbox] { accent-color: var(--accent); width: 13px; height: 13px; }
     #note-big {
       font-size: 1.5em; color: var(--accent); font-weight: bold;
       min-width: 72px; text-align: center; letter-spacing: .05em;
@@ -89,7 +87,7 @@
     @media (max-width: 500px) {
       h1 { font-size: .8em; letter-spacing: .2em; }
       button { padding: 9px 12px; font-size: .9em; }
-      select, input[type=range] { font-size: .85em; }
+      select { font-size: .85em; }
       .note-grid { grid-template-columns: repeat(5, 1fr); }
       #note-big { font-size: 1.2em; }
     }
@@ -146,28 +144,8 @@
     <label><span>Cam</span>
       <select id="sel-cam"><option value="">Auto</option></select>
     </label>
-    <label><span>Vol</span>
-      <input id="rng-vol" type="range" min="0" max="1" step="0.01" value="0.7">
-    </label>
-    <label><span>Pan</span>
-      <input id="rng-pan" type="range" min="-1" max="1" step="0.01" value="0">
-    </label>
-    <label><span>Sortie</span>
-      <select id="sel-out"><option value="">Défaut</option></select>
-    </label>
-    <label><span>Son</span>
-      <select id="sel-son">
-        <option value="theremin">Thérémine</option>
-        <option value="martenot">Onde Martenot</option>
-        <option value="drone">Drone</option>
-        <option value="strings">String Ensemble</option>
-        <option value="flute">Flûte</option>
-        <option value="ocarina">Ocarina</option><option value="piano">Piano</option>
-      </select>
-    </label>
-    <label><span>Commande</span>
+    <label><span>Transport MIDI</span>
       <select id="sel-control-output">
-        <option value="audio">Audio local</option>
         <option value="webmidi">MIDI direct</option>
         <option value="network">Pont MIDI réseau</option>
       </select>
@@ -180,7 +158,7 @@
       inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false"
       placeholder="wss://adresse-du-pont">
     <button id="btn-network-connect" class="is-hidden">CONNECTER LE PONT</button>
-    <div id="midi-status">Audio local actif</div>
+    <div id="midi-status">Connexion MIDI requise</div>
     <div id="note-big">—</div>
     <button id="btn-edit" style="margin-left:auto">NOTES ▾</button>
     <button id="btn-fs" title="Plein écran">⛶</button>
@@ -196,7 +174,6 @@
 
   <div id="status">Chargement du modèle MediaPipe…</div>
 
-<script src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
 <script type="module">
 (async () => {
 
@@ -215,8 +192,6 @@ function midiToName(m) {
   if (m < 0 || m > 127) return '?';
   return FR[m % 12] + (Math.floor(m / 12) - 1);
 }
-function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
-
 function genNotes(root, mode, n = 15) {
   const ivs = SCALES[mode];
   const out = []; let oct = 0, i = 0;
@@ -253,7 +228,7 @@ let mirrored  = true;
 let handChoice = 'left'; // 'left' or 'right' from user's perspective
 let activeIdx = -1;
 let activeVol = 0;
-let controlOutput = 'audio';
+let controlOutput = 'webmidi';
 let midiAccess = null;
 let midiOutput = null;
 let networkSocket = null;
@@ -295,7 +270,6 @@ function stopControlNote() {
 }
 
 function updateControlOutput(idx, vol) {
-  if (controlOutput === 'audio') return;
   if (idx < 0 || vol <= 0.02) {
     stopControlNote();
     return;
@@ -412,9 +386,7 @@ function refreshControlOutputUi() {
   midiOutputWrap.classList.toggle('is-hidden', !isWebMidi);
   networkUrl.classList.toggle('is-hidden', !isNetwork);
   btnNetworkConnect.classList.toggle('is-hidden', !isNetwork);
-  document.getElementById('sel-son').disabled = controlOutput !== 'audio';
-  if (controlOutput === 'audio') setMidiStatus('Audio local actif', true);
-  else if (isWebMidi) {
+  if (isWebMidi) {
     setMidiStatus(navigator.requestMIDIAccess
       ? 'Cliquez sur CONNECTER MIDI'
       : 'MIDI direct indisponible ici : utilisez Pont MIDI réseau');
@@ -426,11 +398,9 @@ function refreshControlOutputUi() {
 }
 
 selControlOutput.addEventListener('change', async event => {
-  if (running && controlOutput === 'audio') playNote(-1, 0);
-  else stopControlNote();
+  stopControlNote();
   controlOutput = event.target.value;
   refreshControlOutputUi();
-  if (controlOutput === 'audio' && running && !audioReady) await initAudio();
 });
 btnMidiConnect.addEventListener('click', connectWebMidi);
 selMidiOutput.addEventListener('change', () => {
@@ -443,18 +413,6 @@ selMidiOutput.addEventListener('change', () => {
 });
 btnNetworkConnect.addEventListener('click', connectNetwork);
 refreshControlOutputUi();
-
-// ── PRESETS SON ──────────────────────────────────────────────────────────────
-const PRESETS_SON = {
-  theremin: { oscType:'sawtooth', vibratoHz:5.2, vibratoDepth:5, filterQ:2.5, filterBase:900,  attack:0.012, release:0.07,  reverbMix:0.28, octaveShift:0,  stopTime:0.07 },
-  martenot: { oscType:'sine',     vibratoHz:4.0, vibratoDepth:2, filterQ:0.7, filterBase:2200, attack:0.06,  release:0.15,  reverbMix:0.45, octaveShift:0,  stopTime:0.07 },
-  drone:    { oscType:'sawtooth', vibratoHz:0.5, vibratoDepth:0,   filterQ:3.0, filterBase:280,  attack:2.0,   release:6.0,  reverbMix:0.82, octaveShift:-2, stopTime:0.25 },
-  strings:  { oscType:'sawtooth', vibratoHz:5.2, vibratoDepth:3,   filterQ:1.5, filterBase:700,  attack:0.3,   release:0.4,  reverbMix:0.5,  octaveShift:0,  stopTime:0.15 },
-  flute:    { oscType:'sine',     vibratoHz:5.0, vibratoDepth:2.5, filterQ:0.4, filterBase:5000, attack:0.04,  release:0.1,  reverbMix:0.32, octaveShift:1,  stopTime:0.07 },
-  ocarina: { oscType:'sine',     vibratoHz:4.2, vibratoDepth:1,   filterQ:0.6, filterBase:2800, attack:0.06,  release:0.15, reverbMix:0.28, octaveShift:0,  stopTime:0.08 },
-  piano:  { oscType:'triangle', vibratoHz:0, vibratoDepth:0, filterQ:1.2, filterBase:3200, attack:0.005, release:0.8, reverbMix:0.22, octaveShift:0, stopTime:0.22 }
-};
-let sonMode = 'theremin';
 
 // Retourne true si ce côté MediaPipe correspond à la main choisie par l'utilisateur.
 // En vue miroir, MP "Left" = main droite de l'utilisateur, et vice-versa.
@@ -568,278 +526,12 @@ selCam.addEventListener('change', async () => {
   }
 });
 
-// ── AUDIO ────────────────────────────────────────────────────────────────────
-let audioCtx, osc, vibratoOsc, vibratoGain, filter, envGain, masterGain, reverbGain, panner;
-let pianoSampler, pianoReady = false, pianoLoading, pianoLastPitch = null;
-let stringsSampler, stringsGain, stringsReady = false, stringsLoading, stringsLastPitch = null, stringsLastTrigger = -Infinity;
-
-function initPiano() {
-  if (pianoLoading) return pianoLoading;
-  if (!window.Tone) return Promise.reject(new Error('Tone.js indisponible'));
-  window.Tone.setContext(audioCtx);
-  pianoLoading = new Promise((resolve, reject) => {
-    pianoSampler = new window.Tone.Sampler({
-      urls: {
-        C4: 'C4.mp3',
-        'D#4': 'Ds4.mp3',
-        'F#4': 'Fs4.mp3',
-        A4: 'A4.mp3'
-      },
-      baseUrl: 'https://tonejs.github.io/audio/salamander/',
-      attack: 0,
-      release: 1.5,
-      onload: () => {
-        pianoReady = true;
-        resolve();
-      },
-      onerror: error => {
-        console.error('Chargement du piano impossible', error);
-        reject(error);
-      }
-    }).connect(masterGain);
-  });
-  return pianoLoading;
-}
-
-function initStrings() {
-  if (stringsLoading) return stringsLoading;
-  if (!window.Tone) return Promise.reject(new Error('Tone.js indisponible'));
-  window.Tone.setContext(audioCtx);
-  stringsGain = audioCtx.createGain();
-  stringsGain.gain.value = 0;
-  stringsGain.connect(masterGain);
-  stringsLoading = new Promise((resolve, reject) => {
-    stringsSampler = new window.Tone.Sampler({
-      urls: {
-        C2: 'C2.mp3',
-        A2: 'A2.mp3',
-        C3: 'C3.mp3',
-        A3: 'A3.mp3',
-        C4: 'C4.mp3',
-        A4: 'A4.mp3',
-        C5: 'C5.mp3',
-        A5: 'A5.mp3',
-        C6: 'C6.mp3'
-      },
-      baseUrl: './assets/string-ensemble/',
-      attack: 0.12,
-      release: 1.2,
-      onload: () => {
-        stringsReady = true;
-        resolve();
-      },
-      onerror: error => {
-        console.error('Chargement du String Ensemble impossible', error);
-        reject(error);
-      }
-    }).connect(stringsGain);
-  });
-  return stringsLoading;
-}
-let padOsc1, padOsc2, padOsc3, padOsc4, padGain;
-let tremoloLFO, tremoloAmp, tremoloMod;
-let audioReady = false;
-
-function makeReverb(ctx) {
-  const conv = ctx.createConvolver();
-  const sr = ctx.sampleRate, len = sr * 2;
-  const buf = ctx.createBuffer(2, len, sr);
-  for (let c = 0; c < 2; c++) {
-    const d = buf.getChannelData(c);
-    for (let i = 0; i < len; i++)
-      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
-  }
-  conv.buffer = buf;
-  return conv;
-}
-
-async function initAudio() {
-  if (audioReady) return;
-  audioReady = true;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  await audioCtx.resume();
-
-  const p = PRESETS_SON[sonMode];
-  osc = audioCtx.createOscillator();
-  osc.type = p.oscType;
-  osc.frequency.value = 261.63;
-
-  vibratoOsc = audioCtx.createOscillator();
-  vibratoOsc.frequency.value = p.vibratoHz;
-  vibratoGain = audioCtx.createGain();
-  vibratoGain.gain.value = p.vibratoDepth;
-  vibratoOsc.connect(vibratoGain);
-  vibratoGain.connect(osc.frequency);
-  vibratoOsc.start();
-
-  filter = audioCtx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = p.filterBase;
-  filter.Q.value = p.filterQ;
-
-  envGain = audioCtx.createGain();
-  envGain.gain.value = 0;
-
-  masterGain = audioCtx.createGain();
-  masterGain.gain.value = parseFloat(document.getElementById('rng-vol').value);
-
-  const reverb = makeReverb(audioCtx);
-  reverbGain = audioCtx.createGain();
-  reverbGain.gain.value = p.reverbMix;
-
-  padOsc1 = audioCtx.createOscillator(); padOsc2 = audioCtx.createOscillator();
-  padOsc3 = audioCtx.createOscillator(); padOsc4 = audioCtx.createOscillator();
-  padGain = audioCtx.createGain();
-  [padOsc1, padOsc2, padOsc3, padOsc4].forEach(o => { o.type = 'sawtooth'; o.connect(padGain); o.start(); });
-  padOsc1.detune.value = -20; padOsc2.detune.value = +20;
-  padOsc3.detune.value = -45; padOsc4.detune.value = +45;
-  padGain.gain.value = sonMode === 'drone' ? 0.3 : sonMode === 'strings' ? 0.45 : 0;
-
-  tremoloLFO = audioCtx.createOscillator();
-  tremoloLFO.type = 'sine'; tremoloLFO.frequency.value = 5.0;
-  tremoloAmp = audioCtx.createGain();
-  tremoloAmp.gain.value = sonMode === 'drone' ? 0.12 : 0;
-  tremoloMod = audioCtx.createGain();
-  tremoloMod.gain.value = sonMode === 'drone' ? 0.88 : 1;
-  tremoloLFO.connect(tremoloAmp);
-  tremoloAmp.connect(tremoloMod.gain);
-  tremoloLFO.start();
-
-  osc.connect(filter);
-  padGain.connect(filter);
-  filter.connect(tremoloMod);
-  tremoloMod.connect(envGain);
-  envGain.connect(masterGain);
-  envGain.connect(reverb);
-  reverb.connect(reverbGain);
-  reverbGain.connect(masterGain);
-  panner = audioCtx.createStereoPanner();
-  panner.pan.value = parseFloat(document.getElementById('rng-pan').value) || 0;
-  masterGain.connect(panner);
-  panner.connect(audioCtx.destination);
-  osc.start();
-  const pianoPromise = initPiano().catch(error => {
-    console.error('Piano Salamander indisponible', error);
-  });
-  if (sonMode === 'piano') await pianoPromise;
-  const stringsPromise = initStrings().catch(error => {
-    console.error('String Ensemble FluidR3 GM indisponible', error);
-  });
-  if (sonMode === 'strings') await stringsPromise;
-}
-
-document.getElementById('rng-vol').addEventListener('input', e => {
-  if (masterGain)
-    masterGain.gain.setTargetAtTime(+e.target.value, audioCtx.currentTime, 0.05);
-});
-
-document.getElementById('rng-pan').addEventListener('input', e => {
-  if (panner) panner.pan.setTargetAtTime(+e.target.value, audioCtx.currentTime, 0.05);
-});
-
-const selOut = document.getElementById('sel-out');
-async function enumerateOutputs() {
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const outs = devices.filter(d => d.kind === 'audiooutput');
-    const prev = selOut.value;
-    selOut.innerHTML = '<option value="">Défaut</option>';
-    outs.forEach((out, i) => {
-      const o = document.createElement('option');
-      o.value = out.deviceId;
-      o.textContent = out.label || `Sortie ${i+1}`;
-      if (out.deviceId === prev) o.selected = true;
-      selOut.appendChild(o);
-    });
-    if (!AudioContext.prototype.setSinkId) { selOut.disabled = true; selOut.title = 'Non supporté sur Safari'; }
-  } catch(_) {}
-}
-enumerateOutputs();
-selOut.addEventListener('change', async () => {
-  if (!audioCtx?.setSinkId) return;
-  try { await audioCtx.setSinkId(selOut.value || ''); } catch(_) {}
-});
-
+// ── SORTIE MIDI ──────────────────────────────────────────────────────────────
 function playNote(idx, vol) {
   if (!running) return;
   updateControlOutput(idx, vol);
-  if (controlOutput !== 'audio') {
-    activeIdx = idx >= 0 && vol > 0.02 ? idx : -1;
-    activeVol = activeIdx >= 0 ? vol : 0;
-    return;
-  }
-  if (!audioCtx) return;
-  if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') audioCtx.resume();
-  const p = PRESETS_SON[sonMode];
-  if (idx >= 0 && vol > 0.02) {
-    const freq = midiToFreq(notes[idx]) * Math.pow(2, p.octaveShift);
-    if (sonMode === 'piano') {
-      envGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.01);
-      if (stringsGain) stringsGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
-      if (stringsReady && stringsLastPitch !== null) stringsSampler.releaseAll();
-      stringsLastPitch = null;
-      stringsLastTrigger = -Infinity;
-      if (pianoReady && freq !== pianoLastPitch) {
-        pianoSampler.triggerAttackRelease(freq, 1.2, undefined, Math.max(0.15, vol));
-        pianoLastPitch = freq;
-      }
-      activeIdx = idx;
-      activeVol = vol;
-      return;
-    }
-    if (sonMode === 'strings') {
-      envGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.01);
-      if (pianoReady && pianoLastPitch !== null) pianoSampler.releaseAll();
-      pianoLastPitch = null;
-      stringsGain.gain.setTargetAtTime(Math.max(0, Math.min(1, vol)) * 0.85, audioCtx.currentTime, 0.12);
-      const now = audioCtx.currentTime;
-      if (stringsReady && (freq !== stringsLastPitch || now - stringsLastTrigger > 2.9)) {
-        if (stringsLastPitch !== null && stringsLastPitch !== freq) stringsSampler.releaseAll();
-        stringsSampler.triggerAttack(freq, undefined, 0.8);
-        stringsLastPitch = freq;
-        stringsLastTrigger = now;
-      }
-      activeIdx = idx;
-      activeVol = vol;
-      return;
-    }
-    if (stringsGain) stringsGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
-    if (stringsReady && stringsLastPitch !== null) stringsSampler.releaseAll();
-    stringsLastPitch = null;
-    stringsLastTrigger = -Infinity;
-    if (pianoReady && pianoLastPitch !== null) pianoSampler.releaseAll();
-    pianoLastPitch = null;
-    osc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.03);
-    if (sonMode === 'drone' || sonMode === 'strings') {
-      [padOsc1, padOsc2, padOsc3, padOsc4].forEach(o => o.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.05));
-    }
-    filter.frequency.setTargetAtTime(p.filterBase + vol * 2000, audioCtx.currentTime, 0.03);
-    envGain.gain.setTargetAtTime(vol * 0.7, audioCtx.currentTime, p.attack);
-    reverbGain.gain.setTargetAtTime(p.reverbMix, audioCtx.currentTime, 0.05);
-    activeIdx = idx;
-    activeVol = vol;
-  } else {
-    if (sonMode === 'piano') {
-      if (pianoReady && pianoLastPitch !== null) pianoSampler.releaseAll();
-      pianoLastPitch = null;
-      activeIdx = -1;
-      activeVol = 0;
-      return;
-    }
-    if (sonMode === 'strings') {
-      if (stringsGain) stringsGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.15);
-      if (stringsReady && stringsLastPitch !== null) stringsSampler.releaseAll();
-      stringsLastPitch = null;
-      stringsLastTrigger = -Infinity;
-      activeIdx = -1;
-      activeVol = 0;
-      return;
-    }
-    envGain.gain.setTargetAtTime(0, audioCtx.currentTime, p.stopTime);
-    reverbGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
-    activeIdx = -1;
-    activeVol = 0;
-  }
+  activeIdx = idx >= 0 && vol > 0.02 ? idx : -1;
+  activeVol = activeIdx >= 0 ? vol : 0;
 }
 
 // ── MEDIAPIPE ────────────────────────────────────────────────────────────────
@@ -956,7 +648,6 @@ let lastT = -1;
 
 btnStart.addEventListener('click', async () => {
   if (!running) {
-    if (controlOutput === 'audio') await initAudio();
     await startCamera();
     running = true;
     frameLoop();
@@ -964,8 +655,7 @@ btnStart.addEventListener('click', async () => {
     btnStart.classList.add('on');
     document.getElementById('status').textContent = '';
   } else {
-    if (controlOutput === 'audio') playNote(-1, 0);
-    else stopControlNote();
+    stopControlNote();
     running = false;
     cancelAnimationFrame(animFrame);
     animFrame = null;
@@ -976,35 +666,6 @@ btnStart.addEventListener('click', async () => {
     ctx2d.clearRect(0, 0, overlay.width, overlay.height);
     document.getElementById('note-big').textContent = '—';
     document.getElementById('status').textContent = 'Arrêté';
-  }
-});
-
-// ── CHOIX DU SON ─────────────────────────────────────────────────────────────
-document.getElementById('sel-son').addEventListener('change', e => {
-  sonMode = e.target.value;
-  if (!audioCtx) return;
-  const p = PRESETS_SON[sonMode];
-  osc.type = p.oscType;
-  vibratoOsc.frequency.setTargetAtTime(p.vibratoHz, audioCtx.currentTime, 0.5);
-  vibratoGain.gain.setTargetAtTime(p.vibratoDepth, audioCtx.currentTime, 0.5);
-  filter.Q.setTargetAtTime(p.filterQ, audioCtx.currentTime, 0.5);
-  reverbGain.gain.setTargetAtTime(p.reverbMix, audioCtx.currentTime, 0.5);
-  const isDrone = sonMode === 'drone';
-  const isStrings = sonMode === 'strings';
-  if (isDrone) {
-    padOsc1.detune.value = -20; padOsc2.detune.value = 20;
-    padOsc3.detune.value = -45; padOsc4.detune.value = 45;
-    if (padGain) padGain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.5);
-  } else if (isStrings) {
-    padOsc1.detune.value = -8;  padOsc2.detune.value = 8;
-    padOsc3.detune.value = -18; padOsc4.detune.value = 18;
-    if (padGain) padGain.gain.setTargetAtTime(0.45, audioCtx.currentTime, 0.5);
-  } else {
-    if (padGain) padGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
-  }
-  if (tremoloAmp) {
-    tremoloAmp.gain.setTargetAtTime(isDrone ? 0.12 : 0, audioCtx.currentTime, 0.3);
-    tremoloMod.gain.setTargetAtTime(isDrone ? 0.88 : 1, audioCtx.currentTime, 0.3);
   }
 });
 

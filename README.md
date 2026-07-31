@@ -1,10 +1,11 @@
 # SEB WebTheremine Universel
 
-Version indépendante de SEB WebTheremine avec trois modes de sortie :
+Interface MIDI indépendante de SEB WebTheremine avec deux transports :
 
-- audio local ;
 - Web MIDI direct sur les navigateurs compatibles ;
 - pont MIDI réseau par WebSocket pour iPad et les navigateurs sans Web MIDI.
+
+Cette version ne produit aucun son et ne contient aucune banque audio.
 
 ## Protocole du pont réseau
 
