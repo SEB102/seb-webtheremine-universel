@@ -1,2 +1,17 @@
 .DS_Store
-SEBMediaMIDI/
+
+# Application native macOS/iPadOS : reste sur le disque, ne part pas
+# sur GitHub Pages (43 Mo d'assets MediaPipe inutiles pour la page web).
+Config/
+Sources/
+Resources/
+project.yml
+SEBMediaMIDI.xcodeproj/
+
+# Artefacts de compilation Xcode
+DerivedData/
+DerivedData-iOS/
+build/
+Dist/
+*.xcuserstate
+xcuserdata/
