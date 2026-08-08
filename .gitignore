@@ -1,17 +1,22 @@
+.DS_Store
 
 # Application native macOS/iPadOS : reste sur le disque, ne part pas
-# Artefacts de compilation Xcode
 # sur GitHub Pages (43 Mo d'assets MediaPipe inutiles pour la page web).
-*.xcuserstate
-.DS_Store
 Config/
-DerivedData-iOS/
-DerivedData/
-Dist/
-Resources/
 Sources/
-Theremine-GarageBand.app/
-Theremine-GarageBand.xcodeproj/
-build/
+Resources/
 project.yml
+Theremine-GarageBand.xcodeproj/
+Theremine-GarageBand.app/
+
+# Pont MIDI réseau et ses modules
+node_modules/
+package-lock.json
+
+# Artefacts de compilation Xcode
+DerivedData/
+DerivedData-iOS/
+build/
+Dist/
+*.xcuserstate
 xcuserdata/

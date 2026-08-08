@@ -28,9 +28,31 @@ Cette page est aussi publiée en ligne :
 <https://seb102.github.io/seb-webtheremine-universel/>
 Le dossier est le dépôt de cette publication — d'où le `.git` et le `.nojekyll`.
 
-Un second transport, « Pont MIDI réseau », existe dans l'interface mais **n'a
-pas de serveur** : rien n'implémente le protocole `seb-midi-bridge-v1` décrit
-plus bas. Il ne fait donc rien pour l'instant.
+### Jouer depuis un iPad, un téléphone ou un PC — sans rien installer
+
+Double-cliquez **`LANCER LE PONT.command`** sur le Mac. La fenêtre affiche une
+adresse du type `http://192.168.1.23:8080`.
+
+Sur l'autre appareil, connecté au **même WiFi**, ouvrez cette adresse dans le
+navigateur. Puis dans la page : *Transport MIDI* → « Pont MIDI réseau », et
+saisissez la même adresse en remplaçant `http` par `ws` — soit
+`ws://192.168.1.23:8080`.
+
+C'est la seule façon de jouer depuis un iPad sans passer par Xcode : aucun
+navigateur iOS ne sait produire du MIDI, mais tous savent parler WebSocket.
+
+Le pont crée lui-même un port MIDI nommé **Theremine-GarageBand** : le pilote
+IAC devient inutile. Choisissez ce port comme entrée dans GarageBand, Live,
+Logic ou Max.
+
+**Plusieurs joueurs à la fois** : chaque appareil connecté reçoit son propre
+canal MIDI (1, 2, 3…), ce qui permet un instrument différent par personne.
+Si quelqu'un se déconnecte en pleine note, le pont la coupe pour éviter
+qu'elle reste bloquée.
+
+Il faut ouvrir la page **depuis le pont**, pas depuis l'adresse GitHub : un
+navigateur refuse une connexion `ws://` non chiffrée depuis une page en
+`https://`.
 
 ## 2. L'application Mac et iPad — `project.yml`, `Sources/`, `Resources/`
 

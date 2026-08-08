@@ -1,0 +1,10 @@
+{
+  "name": "theremine-garageband-pont",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pont MIDI reseau : recoit les notes d'un iPad ou d'un autre appareil et les injecte dans un port MIDI virtuel.",
+  "dependencies": {
+    "@julusian/midi": "^3.6.1",
+    "ws": "^8.18.0"
+  }
+}
