@@ -39,6 +39,7 @@
     button.on { background: var(--accent); color: #000; font-weight: bold; }
     label { display: flex; align-items: center; gap: 5px; font-size: .78em; color: #555; }
     label span { color: var(--text); }
+    input[type=range] { width: 70px; accent-color: var(--accent); }
     select {
       background: var(--bg); color: var(--text);
       border: 1px solid #2a2a3a; padding: 3px 5px;
@@ -159,6 +160,16 @@
       placeholder="wss://adresse-du-pont">
     <button id="btn-network-connect" class="is-hidden">CONNECTER LE PONT</button>
     <div id="midi-status">Connexion MIDI requise</div>
+    <label title="Délai avant qu'une note sorte quand rien ne sonne. Court = attaque franche.">
+      <span>Départ</span>
+      <input id="rng-attaque" type="range" min="0" max="150" step="10" value="60">
+      <span id="lbl-attaque">60 ms</span>
+    </label>
+    <label title="Délai avant de quitter la note en cours pour une autre. C'est lui qui supprime les notes de passage.">
+      <span>Latence</span>
+      <input id="rng-latence" type="range" min="200" max="400" step="10" value="300">
+      <span id="lbl-latence">300 ms</span>
+    </label>
     <div id="note-big">—</div>
     <button id="btn-edit" style="margin-left:auto">NOTES ▾</button>
     <button id="btn-fs" title="Plein écran">⛶</button>
@@ -228,6 +239,47 @@ let mirrored  = true;
 let handChoice = 'left'; // 'left' or 'right' from user's perspective
 let activeIdx = -1;
 let activeVol = 0;
+
+// ── FILTRE ANTI-NOTES-DE-PASSAGE ─────────────────────────────────────────────
+// Une zone ne sonne que si la main y reste un certain temps. Ce temps diffère
+// selon la situation, car les deux cas n'ont pas le même besoin :
+//   • rien ne sonne  → `attaqueMs`, court. On vient du silence, il n'y a aucune
+//     note à traverser : l'attaque doit être franche.
+//   • une note sonne → `latenceMs`, long. Il faut du temps pour distinguer
+//     « je traverse » de « je m'installe ». C'est CE délai qui supprime les
+//     notes de passage : do → mi ne fait plus sonner le ré intermédiaire.
+//     Pendant la traversée, la note précédente continue (legato, sans trou).
+// Sous le seuil audible on est en silence : baisser / glisser / remonter
+// repasse donc par le délai court.
+const SEUIL_AUDIBLE = 0.02;   // même seuil que updateControlOutput()
+const OUBLI_MS = 250;         // sans appel pendant ce temps, on repart à zéro
+let attaqueMs    = 60;        // curseur « Départ »  (0–150 ms)
+let latenceMs    = 300;       // curseur « Latence » (200–400 ms)
+let pendingIdx   = -1;        // zone survolée, en attente de confirmation
+let pendingSince = 0;         // horodatage d'entrée dans cette zone
+let committedIdx = -1;        // zone réellement jouée
+let lastVu       = -1e9;      // dernier appel, pour l'oubli automatique
+
+// Renvoie la zone à jouer, ou -1 si rien n'est encore confirmé.
+function resolveIdx(rawIdx, now, vol) {
+  if (now - lastVu > OUBLI_MS) { pendingIdx = -1; committedIdx = -1; }
+  lastVu = now;
+  const silencieux = committedIdx < 0 || vol <= SEUIL_AUDIBLE;
+  if (rawIdx !== pendingIdx) { pendingIdx = rawIdx; pendingSince = now; }
+  if (now - pendingSince >= (silencieux ? attaqueMs : latenceMs)) committedIdx = rawIdx;
+  return committedIdx;
+}
+
+{
+  const g = id => document.getElementById(id);
+  g('rng-attaque').addEventListener('input', e => {
+    attaqueMs = parseInt(e.target.value) || 0; g('lbl-attaque').textContent = attaqueMs + ' ms';
+  });
+  g('rng-latence').addEventListener('input', e => {
+    latenceMs = parseInt(e.target.value) || 0; g('lbl-latence').textContent = latenceMs + ' ms';
+  });
+}
+
 let controlOutput = 'webmidi';
 let midiAccess = null;
 let midiOutput = null;
@@ -270,7 +322,7 @@ function stopControlNote() {
 }
 
 function updateControlOutput(idx, vol) {
-  if (idx < 0 || vol <= 0.02) {
+  if (idx < 0 || vol <= SEUIL_AUDIBLE) {
     stopControlNote();
     return;
   }
@@ -530,7 +582,7 @@ selCam.addEventListener('change', async () => {
 function playNote(idx, vol) {
   if (!running) return;
   updateControlOutput(idx, vol);
-  activeIdx = idx >= 0 && vol > 0.02 ? idx : -1;
+  activeIdx = idx >= 0 && vol > SEUIL_AUDIBLE ? idx : -1;
   activeVol = activeIdx >= 0 ? vol : 0;
 }
 
@@ -622,11 +674,13 @@ function drawFrame(res) {
       if (isCtrl && !controlled) {
         controlled = true;
 
-        const idx = Math.min(N - 1, Math.floor(sx * N));
+        const rawIdx = Math.min(N - 1, Math.floor(sx * N));
         const vol = Math.max(0, Math.min(1, 1 - cy * 1.35));
+        const idx = resolveIdx(rawIdx, performance.now(), vol);
 
         playNote(idx, vol);
-        document.getElementById('note-big').textContent = midiToName(notes[idx]);
+        document.getElementById('note-big').textContent =
+          idx >= 0 ? midiToName(notes[idx]) : '—';
 
         // Volume bar (right edge)
         const bH = vol * H * 0.85;
