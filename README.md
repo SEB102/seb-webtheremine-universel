@@ -39,6 +39,11 @@ iOS ne supporte Web MIDI, et Apple impose son moteur à tous. L'application
 contourne le mur en publiant une vraie source CoreMIDI nommée
 **Theremine-GarageBand**, que GarageBand voit directement.
 
+**Elle ne produit aucun son, jamais** : ni dans l'application, ni si l'on
+ouvre ses modes dans un navigateur. Aucun moteur audio n'est démarré et les
+réglages sonores (Vol, Pan, Son, Sortie) sont masqués. C'est GarageBand qui
+sonne, avec l'instrument de la piste choisie.
+
 Elle réunit cinq modes — Mains, Mains Duo, Visage, Visage Duo, Continu —
 affichés dans une vue web servie depuis `127.0.0.1`. **Aucune connexion
 Internet n'est utilisée** : tous les fichiers MediaPipe sont dans `Resources/`.
