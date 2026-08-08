@@ -37,7 +37,7 @@ plus bas. Il ne fait donc rien pour l'instant.
 C'est **la seule façon d'envoyer du MIDI depuis un iPad** : aucun navigateur
 iOS ne supporte Web MIDI, et Apple impose son moteur à tous. L'application
 contourne le mur en publiant une vraie source CoreMIDI nommée
-**SEB MediaMIDI**, que GarageBand voit directement.
+**Theremine-GarageBand**, que GarageBand voit directement.
 
 Elle réunit cinq modes — Mains, Mains Duo, Visage, Visage Duo, Continu —
 affichés dans une vue web servie depuis `127.0.0.1`. **Aucune connexion
@@ -51,17 +51,17 @@ envoie Note Off, All Notes Off et recentre le Pitch Bend.
 
 ```sh
 xcodegen generate
-xcodebuild -project SEBMediaMIDI.xcodeproj -scheme SEBMediaMIDI-macOS \
+xcodebuild -project Theremine-GarageBand.xcodeproj -scheme TheremineGarageBand-macOS \
   -configuration Debug CODE_SIGNING_ALLOWED=NO build
 ```
 
-Pour l'iPad : ouvrir `SEBMediaMIDI.xcodeproj`, choisir l'équipe de signature
-dans la cible `SEBMediaMIDI-iOS`, puis lancer sur l'appareil. Cela suppose que
+Pour l'iPad : ouvrir `Theremine-GarageBand.xcodeproj`, choisir l'équipe de signature
+dans la cible `TheremineGarageBand-iOS`, puis lancer sur l'appareil. Cela suppose que
 la **plateforme iOS soit installée** dans Xcode (Réglages → Composants).
 
 ### Utilisation avec GarageBand
 
-1. Lancer SEB MediaMIDI et démarrer la caméra dans le mode voulu.
+1. Lancer Theremine-GarageBand et démarrer la caméra dans le mode voulu.
 2. Dans GarageBand, sélectionner une piste d'instrument logiciel.
 3. Jouer : GarageBand reçoit les événements en direct.
 
