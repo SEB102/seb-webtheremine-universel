@@ -171,8 +171,8 @@
     </label>
     <label title="Délai avant de quitter la note en cours pour une autre. C'est lui qui supprime les notes de passage.">
       <span>Latence</span>
-      <input id="rng-latence" type="range" min="0" max="300" step="10" value="200">
-      <span id="lbl-latence">200 ms</span>
+      <input id="rng-latence" type="range" min="0" max="300" step="10" value="250">
+      <span id="lbl-latence">250 ms</span>
     </label>
     <div id="note-big">—</div>
     <button id="btn-edit" style="margin-left:auto">NOTES ▾</button>
@@ -258,7 +258,7 @@ let activeVol = 0;
 const SEUIL_AUDIBLE = 0.02;   // même seuil que updateControlOutput()
 const OUBLI_MS = 250;         // sans appel pendant ce temps, on repart à zéro
 let attaqueMs    = 60;        // curseur « Départ »  (0–150 ms)
-let latenceMs    = 200;       // curseur « Latence » (0–300 ms)
+let latenceMs    = 250;       // curseur « Latence » (0–300 ms)
 let pendingIdx   = -1;        // zone survolée, en attente de confirmation
 let pendingSince = 0;         // horodatage d'entrée dans cette zone
 let committedIdx = -1;        // zone réellement jouée
