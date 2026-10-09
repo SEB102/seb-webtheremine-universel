@@ -612,8 +612,8 @@ const hl = await HandLandmarker.createFromOptions(fs, {
   numHands: 2
 });
 
-document.getElementById('status').textContent =
-  'Sébastien Gay - juillet 2026 · sortie universelle · Licence MIT · MediaPipe (Apache 2.0)';
+document.getElementById('status').innerHTML =
+  'Sébastien Gay - juillet 2026 · sortie universelle · <a href="LICENSE.txt" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Licence MIT</a> · MediaPipe (Apache 2.0)';
 
 // ── DRAW ─────────────────────────────────────────────────────────────────────
 function drawFrame(res) {
