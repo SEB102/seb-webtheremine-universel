@@ -595,13 +595,13 @@ const overlay = document.getElementById('overlay');
 const ctx2d   = overlay.getContext('2d');
 
 const vision = await import(
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/vision_bundle.mjs"
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/vision_bundle.mjs"
 );
 const { HandLandmarker, FilesetResolver, DrawingUtils } = vision;
 const dwUtils = new DrawingUtils(ctx2d);
 
 const fs = await FilesetResolver.forVisionTasks(
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm"
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm"
 );
 // GPU par défaut ; repli automatique sur le processeur si le GPU est indisponible (certains mobiles)
 const _creerAvecRepli = async (Cls, fileset, opts) => {
