@@ -603,7 +603,12 @@ const dwUtils = new DrawingUtils(ctx2d);
 const fs = await FilesetResolver.forVisionTasks(
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm"
 );
-const hl = await HandLandmarker.createFromOptions(fs, {
+// GPU par défaut ; repli automatique sur le processeur si le GPU est indisponible (certains mobiles)
+const _creerAvecRepli = async (Cls, fileset, opts) => {
+  try { return await Cls.createFromOptions(fileset, opts); }
+  catch (e) { console.warn('GPU indisponible, repli sur CPU', e); const o = JSON.parse(JSON.stringify(opts)); o.baseOptions.delegate = 'CPU'; return Cls.createFromOptions(fileset, o); }
+};
+const hl = await _creerAvecRepli(HandLandmarker, fs, {
   baseOptions: {
     modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
     delegate: 'GPU'
